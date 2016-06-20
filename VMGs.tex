@@ -33,17 +33,22 @@
 \usepackage{textcomp}
 \usepackage{color}
 \usepackage{caption}
+\usepackage[british,english,american]{babel}
+\usepackage{xspace}
+
+\newcommand\FIXME[1]{\textcolor{red}{FIX:}\textcolor{red}{#1}}
+\newcommand{\VMGuards}{\textsc{VMGuards}\xspace}
+
 
 \begin{document}
 
 \mainmatter  % start of an individual contribution
 
 % first the title is needed
-\title{VMGuards:Fine-grained Software Tamper\\ Proofing System
-for PVM-Based \\ Code Obfuscation}
+\title{\VMGuards: A Novel Virtual Machine Based Code Protection System with VM Security \\as the First Class Design Concern}
 
 % a short form should be given in case it is too long for the running head
-\titlerunning{VMGuards: A PVM-Based Software Tamper Proofing}
+\titlerunning{\VMGuards: A Novel Virtual Machine Based Code Protection System}
 
 % the name(s) of the author(s) follow(s) next
 %
@@ -56,14 +61,14 @@ for PVM-Based \\ Code Obfuscation}
 \and Zhaohui Hao$^\dag$
 \and Xiaoqing Gong$^\dag$
 \and\\ Dingyi Fang$^\dag$
-\and Xiaojiang Chen$^\dag$
+\and Feng Chen$^\dag$
 \and Zheng Wang$^\ddag$}  %
-\authorrunning{VMGuards: A PVM-Based Software Tamper Proofing}
+\authorrunning{\VMGuards: A Virtual Machine Based Code Protection System}
 % (feature abused for this document to repeat the title also on left hand pages)
 
 % the affiliations are given next
-\institute{$^\dag$School of Information Science and Technology,\\ Northwest University, Xi¡¯an, 710127, P.R. China.
-\\$^\ddag$School of Computing and Communications, \\ Lancaster University, Lancaster, England.\\
+\institute{$^\dag$School of Information Science and Technology,\\ Northwest University, Xi¡¯an, 710127, P.R. China
+\\$^\ddag$School of Computing and Communications, \\ Lancaster University, Lancaster, United Kingdom\\
 %\\
 %\url{http://www.springer.com/series/7911}
 }
@@ -74,77 +79,99 @@ for PVM-Based \\ Code Obfuscation}
 % that is contained in the LNICST LaTeX support package.
 %
 
-\toctitle{VMGuards:Fine-grained Software Tamper Proofing System for PVM-Based Code Obfuscation}
+\toctitle{\VMGuards: A Novel Virtual Machine Based Code Protection System with VM Security as the First Class Design Concern}
 \tocauthor{Authors' Instructions}
 \maketitle
 
 
 \begin{abstract}
-Software tamper-proofing mechanisms have been increasingly proposed to defend against code-tampering attacks.Process-level Virtual Machines (PVMs) is emerging as a viable method, which works by implementing code obfuscation to protect programs code intergrity statically and checking them at runtime. Coarse-grained enforcements of PVMs that transform and restore the key code segment of the original program into a new section have been shown to be ineffective. However, with advanced tools and techniques, an adversary can locate where and what the new section is and contains, also he can get the organization structure and the execution principle of the new section through static or/and dynamic analysis.
+Process-level virtual machine (PVM) based code obfuscation is a viable means
+for protecting software against runtime code tampering and unauthorized code
+reverse engineering. PVM-based approaches rely on a VM to determine how
+instructions of the protected code region are scheduled and executed.
+Therefore, it is crucial important to protect the VM for runtime code
+tampering that alters the instructions and behaviour of the VM. This paper
+presents \VMGuards, a novel PVM-based code protection system that puts the
+security of VM as the first class design concern. Our approach advances prior work by 
+promoting security of the VM as the first class design constraint. 
+We achieve this by introducing two new instruction sets to protect the
+internal implementations of critical code segments and the host runtime
+environment where the VM runs in. Our new instruction sets have an identical
+code structure as standard virtual instructions but provide additional
+information to allow the VM to check if the critical internal implementation
+or the runtime environment has been compromised. We evaluated our approach
+using a set of real-life applications. Experimental results show that our
+approach provide stronger and finer-grained protection when compared to the
+state-of-the-art with little extra overhead.
 
-As a result, a lot of recent efforts have focused on fine-grained enforcement of PVMs self-security as it was originally proposed. In this work ,we show a fine-grained mechanism of PVMs, which takes the virtual machines self-security into account, uses to detect tamper behavior at run time to a PVM-protected program. We designed tamper-proofing instruction (TPI) and anti-debug instruction (ADI) based on the idea of guards and anti-debug techniques, to improve the security of the normal virtual instruction during the execution of the protected software. We implemented a Proof-of-Concept prototype, VMGuards, to demonstrate our idea, while incurring only modest performance overhead (17\%) and requiring a small amount of changes to the protected code. Key contributions of VMGuards are a fine-grained architecture for securing PVM and a method for generating  TPI\&ADI from binary code.
-\keywords{Software tamper-proofing, Process-level virtual machine protection, Tamper-proofing instruction, Anti-Debug Protection}
+\keywords{Software tamper-proofing, Process-level virtual machine protection, Code obfuscation, Software protection}
 \end{abstract}
 
 
 \section{Introduction}
 
-Tamper is one of the three most major problems encountered in the process of software protection. To an adversary, he will utilize reasonable tools to modify an application, and then put these after-modified applications into use in an unexpected way. However, the value contained in and protected by software is huge. According to the Business Software Alliance and the International Data Corporation, malware problems associated with unlicensed software cost organizations nearly \$500 billion in 2014\cite{bus}. The resources and later maintenances for a software are difficult to describe through numbers. Nevertheless, most software are failed in the market at present, the damages the software developers'benefits badly.
+Malicious tampering and unauthorized usage of software is a serious concern for the computing industry. According to a recent study, unauthorized usage of software costs nearly \$500 billion in 2014~\cite{bus}. Code obfuscation techniques built on process-level virtual machines(PVMs) is emerging as a viable means to protect software systems against malicious tampering. Recent studies have shown that such techniques are effective in managing digital copy rights~\cite{averbuch}, code protection~\cite{mult}, and tamper proofing~\cite{def}.
 
-Software tamper proofing technique is a general term of software protection techniques, which is used to prevent an application from unauthorized modifying by means of software or hardware. In recent years, researches on process-level virtual machines (PVMs) have become one hotspot in the field of software tamper-proofing protection\cite{vir}.
+With PVM-based tamper-proofing techniques, native code of the crucial part of the software is transformed into bespoke virtual machine instructions (bytecodes). These bytecodes will then be translated into machine code by a virtual machine (VM) interpreter during runtime. The underlying principal of PVM-based protection is to force the attacker to move from a familiar computing environment to the unfamiliar and obfuscated virtual environment. This can significantly increase the cost of software tampering and as a result it prevents tampering and deters unauthorized reverse engineering of software.
 
-The basic idea behind virtual machine is, transforming the executable code based on x86 assemble system into bytecode, then inserting a specific designed virtual machine interpreter (called VMInterpreter) into the application, which is used to interpretive executing the transformed bytecode, to prevent the original code from easily reverse engineering or tampering. At run time, the VMInterpreter will take over the execution when it executes to the key code segment. Otherwise, the program will be normally executed.
+The VM system plays a key role in any PVM-based protection schemes because it determines how the virtual instructions are scheduled and interpreted -- which ultimately determine what information and software behaviour will be exposed to the user and attackers. Therefore, it is crucial important to protect the VM against malicious tampering.
+Prior approaches on PVM-based code protection work by creating a new section in the program binary to store virtual instructions of protected code regions. This section, however, is vulnerable to advanced attacks where an adversary can use sophisticated tools (e.g. Ollydbg and IDA Pro) to locate the section to uncover information such as VM implementation and virtual instruction sets. Holding such information helps an adversary to get a better understanding of the working mechanism of the VM. As a result, security of the protected code regions will be greatly compromised.
 
-In order to protect key code segment, many of PVMs transform and restore the crucial code part of the original program into a new section. However, the existing process-level virtual machine software protection scheme cannot ensure the virtual instructions'self-security. With advanced tools and techniques, an adversary can locate where and what the new section is and contains, he can also get the organization structure and the execution principle of the new section through static or/and dynamic analysis.
+This paper presents \VMGuards, a novel tampering detection system. As a departure from prior work, our approach puts the security of the VM as the first class concern in the system design. We achieve this by providing two new sets of virtual instructions to protect the internal implementation of the VM and the host runtime environment (where the VM runs) against code tampering. Firstly, we design a set of Tamper Proofing Instructions (TPIs) to protect the integrity of internal code implementations. Our TPIs extend the standard virtual instruction by providing additional information for the VM inteperator to check the starting and ending addresses of the protected code region, as well as the checksum of the code to prevent code from unauthorized modifications. Our careful design ensures that TPIs have identical structure as the standard virtual instructions, so that they will not raise suspicion from the attacker's perspective. Secondly, we provide a set of anti-debug instructions to protect the host runtime environment (e.g. operating systems and libraries) where the VM runs in against code tampering. These two instruction sets, putting together, allow us to build a code protection system with stronger VM security than any prior work seen so far.
+By carefully integrating the instructions with the VM implementation, we are able to build a code protection with little extra overhead compared to existing solutions. 
 
-Prior work has widespread employed software guards to dynamically protect the program in software tamper-proofing area\cite{prot}. However, these implementations are either simple structure or high overhead\cite{def}.Owing to the theory of comparison, a comparable value will be hidden somewhere in the program, an adversary can bypass the protection if he has successfully located the cmp instructions.
-
-Moreover, a number of software protection schemes only provide a partial solution and suffer from an impractical overhead. The Proteus\cite{pro} system brings 50X-3500X overheads, which are too high for most programs. Remote tamper-proofing schemes\cite{pio} are widely used in embedded devices, but they require strict Quality-of-Service guarantees\cite{on}. A practical scheme should not bring in so much significant overhead, or developers will be unwilling to deploy such measures on a large scale.
-
-This work proposed a novel method for software tamper-proofing scheme, VMGuards, on the basis of previous works on PVMs, which takes the virtual machines self-security into account, used to detect tamper behavior at run time to a PVM-protected program. We designed tamper-proofing instructions (TPI) based on the idea of guards to maintain the integrity of a fixed length code and at the same time introduces anti-debug instruction (ADI) based on the anti-debug techniques to guarantee an unharmed host.
-
-This paper makes the following contributions:
-
+We evaluated \VMGuards using a set of real-life applications. The experimental results show that \VMGuards provides stronger protection with similar overhead when compared to state-of-the-art code protection systems.
+This paper makes the following specific contributions:
 \begin{description}
-  \item[1)] \textbf{Tamper-proofing Instruction.} It designs a Tamper-Proofing Instruction (TPI) to detect tamper behaviour during program execution to ensure the normal virtual instructions'security. These TPIs can only be recognized by our PVM system and totally similar with the normal virtual instruction. On the other hand, we designed these TPIs with a circulation form, to keep each TPI safe from modifying.
-  \item[2)] \textbf{The Concept of Anti-debug protection.} It presents the concept of anti-debug protection, applying five detection and two response mechanisms to detect and make sure that the outside environment of the program is unharmed.
-  \item[3)] \textbf{Evaluating the performance of VMGuards.} It designs and implements VMGuards, and has experimented it by a set of practical software cases, the experiment results show that VMGuards can be used to protect software, and the overhead can be accepted.
+  \item[1)] It is the first work on PVM-based code protection that provides security protection for the VM system.
+  \item[2)] It introduces a novel set of tamper-proofing instructions to protect critical internal implementation from runtime code tampering.
+  \item[3)] It provides a new set of anti-debug instructions to detect code tampering of the host environment.
 \end{description}
 
-The remainder of the paper is organized as follows. Section2 we describe the threat model in which a program executed. Section3 gives an overview of VMGuards. The concept of TPI and ADI are explained in Section4 and Section5. And in Section6 we evaluate and discuss the performance and overhead of VMGuards. Previous works in software tamper-proofing area are discussed in Section7. Finally, in Section8 presents our conclusions.
+The remainder of the paper is organized as follows. Section2 we describe the threat model in which a program executed. Section3 gives an overview of \VMGuards. The concept of TPI and ADI are explained in Section4 and Section5. And in Section6 we evaluate and discuss the performance and overhead of \VMGuards. Previous works in software tamper-proofing area are discussed in Section7. Finally, in Section8 presents our conclusions.
 
-\section{Threat model}
+\section{The Attacking Scenario}
+Our approach is evaluated using a strong attacking scenario of tampering described in~\cite{pio}.
+In this paper, we assume the attacker has set up a tampering host environment to execute the VM-protected program. We also assume the attacker has the right debugging tools and skills to simulate and modify instructions of
+the protected software, and can access and rewrite contents in the program's memory space. This setting represents some real-world attacking scenarios. For example, it is reported that Skype, a widely used communication software, could be cracked using a debugger to locate and modify the key-code segment information from the program's memory space during runtime~\cite{sil}.
+Under our setting, the runtime environment including the operating systems, libraries and hardware can also be compromised to give forged information to the application. Therefore, in this work we assume that the hardware and  software that the target application uses can be compromised by the adversary.
 
-VMGuards's threat model is the same as the strong model in the original Tamper Proofing\cite{pio}. An attacker is modeled as a concurrent user hostile environment, debugging tools which can simulator to execute and even modify the protected program. The attacker can read and write any memory. Skype, for example, the popular VoIP tool\cite{sil}, was cracked by a debugger to get the key-code segment information in memory base. Therefore, in this model, even the OS can be modified to return a negative result.  What is more, the adversary can simulate a hardware to return a``forged true-resul'' to the application. As a result, we assume that the hardware and the software on a host machine are potentially vicious, and all protected programs (including the ones on the host machine) are the targets of the adversary. 
+%In fact, we assume that it's a white-box attack for the adversary. That's to say, the adversary can detect, modify or forge every information on the host machine. So with enough time and resources, the adversary can successfully detect and modify any protected program. Moreover, human adversaries can hardly resolve large data set problems, they have to rely on automatic analysis tools to perform malicious behaviors. At this point, as a protector who needs to increase the overhead or disable the mal-tools which an adversary tries to crash the protected program by every means.
 
-In fact, we assume that it's a white-box attack for the adversary. That's to say, the adversary can detect, modify or forge every information on the host machine. So with enough time and resources, the adversary can successfully detect and modify any protected program. Moreover, human adversaries can hardly resolve large data set problems, they have to rely on automatic analysis tools to perform malicious behaviors. At this point, as a protector who needs to increase the overhead or disable the mal-tools which an adversary tries to crash the protected program by every means.
+\section{Overview of Our Approach}
+\VMGuards is a PVM-based system for software protection. Like classical PVM-based protection schemes, a VM is used to virtualize a single application.
+%From Section2, we have already known the threat model. Next we need to be familiar with the framework of our \VMGuards before we introduce the design of the TPI and ADI. Basically, we divide virtual machine into two categories, the most common one is System-level Virtual Machine, such as VMWare Workstation, VirtualBox, Xen, and these SVM provide a complete system environment for the OS and the related applications\cite{virt}. The other one is Process-level Virtual Machine, which is more suitable for software protection, for it virtualizes a single user-level application.
+Our goal is to protect the VM, a key component of any PVM-based scheme, against runtime code tampering that can alter the behavior of the VM and the protected software. This is achieved by introducing two new sets of virtual instructions, TPI and ADI, to prevent the internal implementation of the VM from unauthorized modification
+and to detect any tampering actions performed in the host environment.
 
-\section{Overview of VMGuards}
-From Section2, we have already known the threat model. Next we need to be familiar with the framework of our VMGuards before we introduce the design of the TPI and ADI. Basically, we divide virtual machine into two categories, the most common one is System-level Virtual Machine, such as VMWare Workstation, VirtualBox, Xen, and these SVM provide a complete system environment for the OS and the related applications\cite{virt}. The other one is Process-level Virtual Machine, which is more suitable for software protection, for it virtualizes a single user-level application.
-
-Therefore, on the basis of Process-level Virtual Machine, we proposed our PoC-VMGuards. VMGuards provides a decryption tamper-proofing mechanism to the encrypted program instructions at runtime.
-
-\begin{figure}[htb]%Í¼1
+\begin{figure}[t!]%Í¼1
     \centering
     \includegraphics[width=0.9\columnwidth]{figure/framework.pdf}
-    \caption{The framework of VMGuards.TPI and ADI are two kinds of security instruction, which can ensure the virtual instructions'self-security.}\label{fig:Fig.1}
+    \caption{The framework of \VMGuards. TPI and ADI are two kinds of security instructions, which can ensure the virtual instructions'self-security.}\label{fig:Fig.1}
 \end{figure}
 
-Our VMGuards works as follows: first, it will control and disassemble the program's instructions during startup. The disassembled instructions then be transformed to a mid-expression, we call it Virtual Instruction (VI). Next, control will transfer to the new section, until the new section is completely executed. Lastly, the new section will retrieve the control to normal execution, till the program finished. Figure.~\ref{fig:Fig.1} shows the main framework of our VMGuards. In the figure, K\_C for key code segment which represents the crucial code part of the program such as the key algorithm, the authorization information used in the program, after protection the segment will be filled up with some junk or useless code, N\_C for new code section where stored the after-protected key code, VI for virtual instruction which will be introduced next. The components will be introduced one by one.
+Figure~\ref{fig:Fig.1} depicts the overall approach of \VMGuards. 
+In the figure, K\_C is the key code segment (e.g. the key algorithm the authorization information) to be protected. During static compile time, the segment will be filled up with some junk or useless code.
+ A new section, N\_C, will be created to store the generated virtual instructions for K\_C. When executing K\_C, the control will be given to N\_C and the virtual instructions will be dynamically
+translated into native code by a VM.
+The protection scheme of \VMGuards works as follows. Upon the time the program is launched, \VMGuards gains the control of the program execution.
+It dissembles the native instructions during program startup. The disassembled instructions then be transformed to a intermediate representation, termed as Virtual Instructions (VIs) in this paper.
+Next, control of the program execution will transfer to the new section (N\_C), until the new section is completely executed. After
+ executing the protected code regions, control will give back the program.
+ 
+\subsection{Disassembly}
 
-\subsection{Disassmebly}
-
-As far as we know, there are two basic disassembly techniques\cite{flow}: linear disassembly and recursive disassembly. The former begins by disassembling the very first instruction of the program. Once an instruction at an address is disassembled, and is decided to have a length of l bytes, disassembly proceeds to the instruction starting at address addr+l. This process continues to the end of the program. Linear disassembly can be confused by ``gaps'' in code that consist of data or alignment-related padding. These gaps will be interpreted by linear disassembly as instructions and decoded, resulting an erroneous disassembly.
+There are two typical techniques for disassembling a program binary~\cite{flow}: linear disassembly and recursive disassembly. The former begins by disassembling the very first instruction of the program. Once an instruction at an address is disassembled, and is decided to have a length of l bytes, disassembly proceeds to the instruction starting at address addr+l. This process continues to the end of the program. Linear disassembly can be confused by ``gaps'' in code that consist of data or alignment-related padding. These gaps will be interpreted by linear disassembly as instructions and decoded, resulting an erroneous disassembly.
 
 The latter uses a different strategy. It starts with a set of code entry points specified in the binary. For an executable, there may be just one such entry point specified, but for shared libraries, the beginning of each exported functions is specified as well. Unlike linear disassembly, recursive disassembly does not get confused by gaps in code, and hence does not produce incorrect disassembly. Nevertheless, it fails to disassemble code that is reachable only via Indirect Control Flow (ICF) transfers.
 
 Our approach combines linear disassembly and recursive disassembly. We utilize linear disassembly to make sure the integrity of the disassembly result and guarantee the correctness of the disassembly result by recursive disassembly.
 
-\subsection{Virtual Instruction}
+\subsection{Virtual Instructions}
 
-After disassembled all instructions, we need to transform these disassembled instructions into a mid-expression\cite{pro}, Virtual Instruction (VI), so that they can only be recognized by our VMGuards when the protected program is executed. Moreover, we have the freedom to design our own VI, this leaves us many choices to make. In this paper, we designed VI to simplify the correspondence between the original instructions and the Handlers, making the design of VMGuards more concise. While the relationships between the original instructions and virtual instructions, and virtual instructions and Handler are many-to-many, this will increase the difficulty of reverse engineering. The virtual instructions, however, are not stored in the protected program.
+After disassembled all instructions, we need to transform these disassembled instructions into a mid-expression\cite{pro}, Virtual Instruction (VI), so that they can only be recognized by our \VMGuards when the protected program is executed. Moreover, we have the freedom to design our own VI, this leaves us many choices to make. In this paper, we designed VI to simplify the correspondence between the original instructions and the Handlers, making the design of \VMGuards more concise. While the relationships between the original instructions and virtual instructions, and virtual instructions and Handler are many-to-many, this will increase the difficulty of reverse engineering. The virtual instructions, however, are not stored in the protected program.
 
-In our VMGuards, there are three main principles to design a reasonable VI sets. First of all, completeness, that's to say, the designed VI must be able to interpret all x86 instructions; Secondly, complexity, a reasonable complexity can lead to a many-to-many relationship, otherwise VI is redundant; Last but not least, functionality, every virtual instruction must has a clearly defined meaning, it can precisely guide an x86 instruction to a certain Handler sequence.
+In our \VMGuards, there are three main principles to design a reasonable VI sets. First of all, completeness, that's to say, the designed VI must be able to interpret all x86 instructions; Secondly, complexity, a reasonable complexity can lead to a many-to-many relationship, otherwise VI is redundant; Last but not least, functionality, every virtual instruction must has a clearly defined meaning, it can precisely guide an x86 instruction to a certain Handler sequence.
 
 Tamper-proofing instructions and Anti-debug instructions are two most designed security virtual instructions. The former is designed to keep the key code segment of the program from tampering, and the latter can make sure that there are no reverse engineering tools exist on the host machine during the program execution. That's to say, by these two security instructions we can, on one hand, keep the program inner safe, on the other hand, prevent the outside execution environment of the program from malicious tools. The following section4 and section5 will focus on these two virtual instructions, more details will be introduced one by one.
 
@@ -162,7 +189,7 @@ As we can see, if we assume the x86 instruction in the first block be the key co
 
 \subsection{Dispatcher}
 
-Like buses have dispatching centers, our VMGuards have Dispatchers, which are used to read and decrypt the VMData (will be introduced in the following section), after decryption the plaintext will be used to calculate the corresponding Handlers'addresses by certain algorithm, and then the program will jump to the accurate address to execute. At this point, we can see that the Dispatcher is a crucial component of the VMInterpreter, which controls the dispatching process to Handler.
+Like buses have dispatching centers, our \VMGuards have Dispatchers, which are used to read and decrypt the VMData (will be introduced in the following section), after decryption the plaintext will be used to calculate the corresponding Handlers'addresses by certain algorithm, and then the program will jump to the accurate address to execute. At this point, we can see that the Dispatcher is a crucial component of the VMInterpreter, which controls the dispatching process to Handler.
 
 So far, so many researches about PVM have targeted on improving the structure of Dispatcher, and currently we can classify the existing structures into three categories: (1) Centralized model; (2) Chained model; and (3) Hybrid model. In this paper, we prefer to employ the third one. Because it's easy to reverse engineering the centralized model to find the only one Dispatcher, further to locate all the Handlers which called by the Dispatcher. For the chained model, it's one way in and one way out, Handles in chained model Dispatcher are called by an offset from one to another, as long as the adversary find the jmp instruction behind every Handler, he can get all Handlers, furthermore reverse engineering the whole program.
 
@@ -239,45 +266,21 @@ For a better trade-off of performance and overhead, we applied the idea of diver
 
 \section{Evaluation and Discussion}
 
-We designed a PoC prototype used to implement TPI and Anti-debug, which is built on a process-level virtual machine, called VMGuards. VMGuards runs as co-routine with the being protected program which will be firstly loaded and checked. Then VMGuards will do some pre-processing tasks, for instance, disassembling the key code segment of the program marked previously by hand, generating multiple handler sets. These information will be stored in a new section. During program execution, VMGuards will take over the execution control when it executes to the key code segment. Then the new section executes and transfers control back to the original program. The program will continue executing to the end.
+We designed a PoC prototype used to implement TPI and Anti-debug, which is built on a process-level virtual machine, called \VMGuards. \VMGuards runs as co-routine with the being protected program which will be firstly loaded and checked. Then \VMGuards will do some pre-processing tasks, for instance, disassembling the key code segment of the program marked previously by hand, generating multiple handler sets. These information will be stored in a new section. During program execution, \VMGuards will take over the execution control when it executes to the key code segment. Then the new section executes and transfers control back to the original program. The program will continue executing to the end.
 
-The idea of VMGuards, in principle, suits for most architectures, our PoC implementation targets the 32-bit Intel x86 platform. Our experimental platform is a DELL OptiPlex 960PC, which has a 3GHz Intel Core Duo processor with 4 GB RAM, and running a 32-bit Windows7 Server Pack1 operating system. We will evaluate VMGuards from performance and security as follows.
 
-\subsection{Performance Evaluation}
+\subsection{Experimental Setup}
 
-For simplicity, Table1 shows how to calculate the execution time of key-code segment.
-
-%±í2
-\begin{table}[htb]
+\begin{table*}[t!]
 \centering
-\caption{Execution Time of Key-Code Segment.}
-\begin{tabular}{l}
-\hline
-\emph{QueryPerformanceCounter(\&Start\_Time); {\color{blue}{//start time}}} \\
-\emph{\textbf{VMGuards\_Start}  {\color{blue}{//key code start flag}}} \\
-\emph{Key-Code Segment} \\
-\emph{\textbf{VMGuards\_End} {\color{blue}{//key code end flag}}} \\
-\emph{QueryPerformanceCounter(\&End\_Time); {\color{blue}{//end time}}} \\
-\emph{\color{blue}{//CPU counter numbers}} \\
-\emph{CPUCounter\_Num = End\_Time.QuadPart-} \\
-\emph{Start\_Time.QuadPart;} \\
-\emph{\color{blue}{//Clock Frequency of CPU timer}} \\
-\emph{QueryPerformanceFrequency(\&freq);;} \\
-\emph{\color{blue}{//The execution time of Key-Code Segment, accurate }} \\
-\emph{\color{blue}{down to \textmu s}} \\
-\emph{\_i64toa(C*1000000/freq.QuadPart, szBuf, 10);} \\ \hline
-\end{tabular}
-\end{table}
-
-\begin{table*}[htbp]
-\centering
-\caption{Test Cases Used in VMGuards}
+\caption{Test Cases Used in \VMGuards}
 \renewcommand{\multirowsetup}{\centering}
-\begin{tabular}{l|c|c|c|c}
+\label{tbl:usecases}
+\begin{tabular}{l|l|r|r|r}
 \hline
 \multirow {3}*{APP\_Name} &                  & Length of  &              & Execution Time \\
                          &Key-Code Segment   & Key-Code   & File Size       & of Key-Code \\
-                         &Description        &Segment     & (Byte)        & Segment(\textmu s) \\ \hline
+                         &Description        & Segment     & (Byte)        & Segment(\textmu s) \\ \hline
 \multirow {2}*{Calculator.exe}	& Multiply operation algorithm	& \multirow {2}*{48}	& \multirow {2}*{2,265,190}	& \multirow {2}*{32} \\
                                 & in Windows Calculator.    &    &    &      \\  \hline
             Compress.exe	& File Compression algorithm.	& 110	& 229,447	& 1,970  \\ \hline
@@ -292,7 +295,59 @@ For simplicity, Table1 shows how to calculate the execution time of key-code seg
 \end{tabular}
 \end{table*}
 
-We test VMGuards with six common Windows applications, Table2 shows some basic information about these applications, including app\_name, Key-Code segment description, length of Key-Code segment, file size and execution time of Key-Code segment. These six applications contain the math operation, compression, position-locating, recursion, message sending and receiving, and lastly browser algorithm, they can represent the basic use of people's normal life. So, we used these applications to evaluate both the runtime overhead and space overhead.
+\paragraph{Benchmarks}
+We evaluated \VMGuards with six real-life applications running on the Windows
+operating system. Table~\ref{tbl:usecases} describes the key information of
+these applications. The code segments to be protected within these applications represent some
+of the commonly used algorithms and operations, including mathematical calculation,
+compression, position-locating, recursion, message sending and receiving, and
+web browsing. The length of the protected code segment varies from 4 instructions to 363 instructions and the
+runtime varies from 0.34 \textmu s to 39 ms.
+
+\paragraph{Evaluation platform}
+The idea of \VMGuards, in principle, suits for most architectures.
+Our prototype
+implementation targets the 32-bit Intel x86 platform. Our experimental
+platform is a DELL OptiPlex 960PC with a 3GHz Intel Core Duo processor
+and 4 GB of RAM. It runs with a 32-bit Windows 7 operating system.
+
+\paragraph{Runtime measurement} Given that some of the protected code segment
+runs for a short period of time, it is important to gather accurate runtime information.
+For this reason, we used the hardware performance counter to gather the runtime informaiton.
+This process is described in Table~\ref{tbl:exe_time}.
+To determine how many runs are needed in order to mitigate
+the noise during program runtime, we calculated the confidence
+range using a 95\% confidence interval after each run; and
+stopped when the difference between the upper and lower
+confidence bounds is smaller than 2\%.
+
+%±í2
+\begin{table}[t!]
+\centering
+\caption{Execution Time of Key-Code Segment.}
+\label{tbl:exe_time}
+\begin{tabular}{l}
+\hline
+\emph{QueryPerformanceCounter(\&Start\_Time); {\color{blue}{//start time}}} \\
+\emph{\textbf{\VMGuards\_Start}  {\color{blue}{//key code start flag}}} \\
+\emph{Key-Code Segment} \\
+\emph{\textbf{\VMGuards\_End} {\color{blue}{//key code end flag}}} \\
+\emph{QueryPerformanceCounter(\&End\_Time); {\color{blue}{//end time}}} \\
+\emph{\color{blue}{//CPU counter numbers}} \\
+\emph{CPUCounter\_Num = End\_Time.QuadPart-} \\
+\emph{Start\_Time.QuadPart;} \\
+\emph{\color{blue}{//Clock Frequency of CPU timer}} \\
+\emph{QueryPerformanceFrequency(\&freq);;} \\
+\emph{\color{blue}{//The execution time of Key-Code Segment, accurate }} \\
+\emph{\color{blue}{down to \textmu s}} \\
+\emph{\_i64toa(C*1000000/freq.QuadPart, szBuf, 10);} \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Experimental Results}
+
+
+
 
 \subsubsection{Runtime Overhead}
 
@@ -360,35 +415,37 @@ That's to say, the TPI Handlers we designed are practically useful and time cons
 
 Our instrumentation adds a new code section to the original program that is on average 1.03 times the original code size. The new section contains more than one Dispatcher to assign Handlers jump to the right addresses to execution. The Dispatchers are mostly like an address translation table for every Handler.
 
-Figure~\ref{fig:Fig.8} shows different applications average running memory costs, the blue bar-graph represented the memory costs when the original programs are running. Correspondingly, the red bar-graph shows the memory costs when the protected programs are running. In total, the space overhead for VMGuards is 117\% over the original program. Note that although the file size has increased, execution must be confined to the new code. Except in the case of programs that store read-only data in their code, other program don't access their code even once. Hence the runtime memory overhead is unaffected by the presence of the original copy of file.
+Figure~\ref{fig:Fig.8} shows different applications average running memory costs, the blue bar-graph represented the memory costs when the original programs are running. Correspondingly, the red bar-graph shows the memory costs when the protected programs are running. In total, the space overhead for \VMGuards is 117\% over the original program. Note that although the file size has increased, execution must be confined to the new code. Except in the case of programs that store read-only data in their code, other program don't access their code even once. Hence the runtime memory overhead is unaffected by the presence of the original copy of file.
 
-\subsubsection{Performance of VMGuards}
+\subsubsection{Performance of \VMGuards}
 
-We tested the applications shown in Table2 with commercial software Code Virtualizer1.3.1.0 (short for CV) and VMProtect1.7.0 (short for VMP) compared with our VMGuards.  We set CV to the lowest protection strength, and VMP to the fastest execution time. Figure~\ref{fig:Fig.9} shows the average file size and average execution time change.
+We tested the applications shown in Table2 with commercial software Code Virtualizer1.3.1.0 (short for CV) and VMProtect1.7.0 (short for VMP) compared with our \VMGuards.  We set CV to the lowest protection strength, and VMP to the fastest execution time. Figure~\ref{fig:Fig.9} shows the average file size and average execution time change.
 
 %figure9
 \begin{figure}[htb]
 \centering
 \includegraphics[width=1.0\columnwidth]{figure/filesize_executiontime.pdf}
 \captionsetup{justification=centering}
-\caption{File Size and Execution Time Differences compared different commercial PVM with our VMGuards}
+\caption{File Size and Execution Time Differences compared different commercial PVM with our \VMGuards}
 \label{fig:Fig.9}
 \end{figure}
 
 
-As we can see from Figure~\ref{fig:Fig.9}, comparing with commercial software, our VMGuards does not extra increase the space overhead. However, about runtime overhead, our VMGuards showed some unstable results.
+As we can see from Figure~\ref{fig:Fig.9}, comparing with commercial software, our \VMGuards does not extra increase the space overhead. However, about runtime overhead, our \VMGuards showed some unstable results.
 
-Reasons can be, a) x86 instruction whether it's different type or different address model, when VMGuards, as we described before, is interpreting execution, Handler sequences used to interpret VI are different from each other, b) there still exist some x86 instructions cannot be interpreted by existing Handlers, program needs to retreat from VMGuards, executing the x86 instruction by host machine then back to VMGuards, continue interpreting execution the left VI. Thus, the runtime overhead can be huge, c) owing to the design of multiple Dispatchers, execution time to different instances can be short or long, and we need to further study on it.
+Reasons can be, a) x86 instruction whether it's different type or different address model, when \VMGuards, as we described before, is interpreting execution, Handler sequences used to interpret VI are different from each other, b) there still exist some x86 instructions cannot be interpreted by existing Handlers, program needs to retreat from \VMGuards, executing the x86 instruction by host machine then back to \VMGuards, continue interpreting execution the left VI. Thus, the runtime overhead can be huge, c) owing to the design of multiple Dispatchers, execution time to different instances can be short or long, and we need to further study on it.
 
 \subsection{Case Study}
 
-Our VMGuards, in fact, is an improved Process-Level Machine, which mainly focuses on improve the security of PVM through two security instructions, Tamper-proofing instruction (TPI) and Anti-debug instruction (ADI). Most evaluations are based on theoretical analysis, since there is not a standard when come to evaluate the security of software protection techniques. We will evaluate the security of TPI and ADI through both experiments and theoretical.
+ Recall the design goal of \VMGuards is to  improve the security of PVM through two security instructions: TPI and ADI. 
+ In this section, we evaluate the security guarantee of TPI and ADI through both experiments and theoretical analysis.
 
-Additionally, we had 20 people as a group who knew the basic framework of VMGuards, but did not know the improved points, and another 20 people interest in crack programs to help us experiment the security of TPI and ADI through their efforts to break the protected test cases mentioned in Table2.
+For our experiments, we have recruited 40 participants. Among those participants, 20 volunteers \FIXME{arrrrgh!! have no idea what are you talking about here. What do you mean knowing the basic framework of VMGuards but don't know the improved points???} and the other 20 volunteers act as attackers to try their best to break our test cases listed in Table~\ref{tbl:usecases}.
+%Additionally, we had 20 people as a group who knew the basic framework of \VMGuards, but did not know the improved points, and another 20 people interest in crack programs to help us experiment the security of TPI and ADI through their efforts to break the protected test cases mentioned in Table2.
 
 \subsubsection{Security of Tamper-Proofing Instruction}
 
-As described in Section4, we organized our Tamper-Proofing Instruction into a ring. Comparing with guards net, TPI-Ring reduced the space overhead brought by complex network theoretically. However, TPI Handlers in TPI-ring didn't lower the self-security of TPI Handlers. We can also see from Figure~\ref{fig:Fig.4} that every TPI Handler is crossed with each other. In another word, there are at least 3 TPI Handlers protecting one address segment when the protected program is running. Stand by the adversary's side, when he tries to break the TPI-Ring, unless he can remove all the TPI Handlers at one time, he would not get what he wants.
+As described in Section 4, we organized our Tamper-Proofing Instruction into a ring. Comparing with guards net, TPI-Ring reduced the space overhead brought by complex network theoretically. However, TPI Handlers in TPI-ring didn't lower the self-security of TPI Handlers. We can also see from Figure~\ref{fig:Fig.4} that every TPI Handler is crossed with each other. In another word, there are at least 3 TPI Handlers protecting one address segment when the protected program is running. Stand by the adversary's side, when he tries to break the TPI-Ring, unless he can remove all the TPI Handlers at one time, he would not get what he wants.
 
 In order to clearly see the TPI-Ring, we did some modification to re-organize and centralize the whole function TPI's three handler together. Based on some reverse-engineering experiences, we found three sets TPIs which deployed in the virtual instructions. See from Table4.
 \newline
@@ -464,7 +521,7 @@ Assuming that Tamper Proofing Instructions prevent the program itself from modif
 \end{minipage}
 \end{figure*}
 
-Experimentally, VMGuards randomly chose the Execution\_Time\_Difference monitor Handler to detect whether the program is being debugged during protection procedure, as we can see from Figure~\ref{fig:Fig.12}.
+Experimentally, \VMGuards randomly chose the Execution\_Time\_Difference monitor Handler to detect whether the program is being debugged during protection procedure, as we can see from Figure~\ref{fig:Fig.12}.
 
 Processing Handler will be chosen to respond to the monited debugging behavior, see from Figure~\ref{fig:Fig.13}. The MessageBox Handler was chosen to respond to the Execution\_Time\_Difference Handler.
 
@@ -478,11 +535,11 @@ Figure~\ref{fig:Fig.14} shows 100 times the execution results of the protected p
 
 \subsection{Discussion}
 
-This section states some of the protective aspects of the VMGuards, as well as vulnerabilities inherent to PVM-based security measures.
+This section states some of the protective aspects of the \VMGuards, as well as vulnerabilities inherent to PVM-based security measures.
 
 \subsubsection{Protection of Virtual Instruction}
 
-The primary goal of Tamper-Proofing Instruction involves protecting the virtual instruction from tamper. To our knowledge, VMGuards is the first PVM-based scheme attempt at tamper-proofing software code. Previously, the adversary could, for instance, locate the critical component-Dispatcher, collect information of all Handlers, and make modifications to the virtual instructions. TPI-Ring can guard all the virtual instructions from tampering, as any changes made by adversary will be detected and responded appropriately. However, over-stress the intensive of TPI adds a serious performance to both runtime and space. As the same, the structure TPI-Ring itself have already adds an additional layer of protection from tampering. With a better balance between TPI protection range and TPI-Ring, VMGuards still can be effectively used to protection program from tampering.
+The primary goal of Tamper-Proofing Instruction involves protecting the virtual instruction from tamper. To our knowledge, \VMGuards is the first PVM-based scheme attempt at tamper-proofing software code. Previously, the adversary could, for instance, locate the critical component-Dispatcher, collect information of all Handlers, and make modifications to the virtual instructions. TPI-Ring can guard all the virtual instructions from tampering, as any changes made by adversary will be detected and responded appropriately. However, over-stress the intensive of TPI adds a serious performance to both runtime and space. As the same, the structure TPI-Ring itself have already adds an additional layer of protection from tampering. With a better balance between TPI protection range and TPI-Ring, \VMGuards still can be effectively used to protection program from tampering.
 
 \subsubsection{Effectiveness against Malicious Host}
 
@@ -505,13 +562,20 @@ Obfuscation techniques also have been broadly used to the area of software tampe
 
 Among the existing research about PVM, almost each of them integrates various protection techniques together. Literature\cite{def} merged the idea of diversity together with virtual machine, proposing a diversity software protection model based on virtual machine. They also designed a software protection RSIC-based virtual machine, it's the first work that merge the diversity with VM; also, literature\cite{mult} introduced the concept of multi-stage binary code obfuscation to obscure a program. It will first proceed n times control flow obfuscation at the beginning of the VM protection£¬then it will choose the key code segment to be protected, moreover, their work also adopted the centralized and chained dispatching model. This is the first research work to improve the VM's dispatching structure, one basic block a time to serve as the dispatching unit, and combined the multiple-level obfuscation, to furthermore enhance the protection strength of the VM; literature\cite{bus} presented another VM protection method based on adaptive dynamic instruction set, it dug down virtual machine protection mechanism, enhancing the execution efficiency and security of the protected program; literature\cite{def} further merged the virtual junk instruction sequence and virtual instruction obscure transformation technique together, and moreover it improved the design of virtual instruction set, making it much harder for an adversary to reverse-engineering the protected program. All in all, the research on PVM is much valuable than it appears.
 
-\section{Conclusions}
+\section{Conclusions and Future Work}
 
-Taking Process-level Virtual Machine (PVM) as one of software protection technique seems gradually increasing in recent years. In this paper, we presents a novel use of PVMs in the field of temper-proofing, and we designed a proof of concept prototype, we call it VMGuards. VMGuards uses Tamper-Proofing Instruction (TPI, it's similar with the concept of guards proposed by Chang\cite{prot}) to maintain the integrity of the key code segment from malicious modifications. TPI is designed to be similar with the normal Handlers, will be placed in random locations during program creation time. At run time, TPI Handlers will calculate another checksum to compare with the pre\_checksum cached in a virtual register v\_ebp, if the two checksums are equal, there is no tamper occurs, and if not, the program will secretly change the value of the virtual register v\_ebp, next time when v\_ebp is used again, the program will be failed. Furthermore, we introduced the anti-debug techniques when an adversary tries to debug the protected program, the program will know that there is a debugger exist in the host compute, then the program will take some respond measurements. The experiment results indicate that our VMGuards can provide a good balance between execution rate and overhead, and moreover provide a platform for different program protection techniques.
+This paper has presented \VMGuards, a novel process level virtual machine based code protection system. \VMGuards advances prior work on VM-based code protection by promoting the VM security as the first class
+design concern. This is achieved through introducing two new sets of virtual instructions
+to maintain the integrity of the internal implementation of the VM; and to detect any tampering attempts to the environment (e.g. the operating system, libraries, and hardware) where the protected applications runs.
+Our approach is evaluated using 6 real-world applications. The experimental results show that \VMGuards offers stronger protection with comparable overhead when compared to the state-of-the-art.
+We demonstrate that the VM is key for defending runtime tampering and VM protection can be achieved with no extra cost.  In future work we intend to explore further refinement to VM protection, and also to integrate
+our approach with other code protection techniques.
+
+%\VMGuards uses Tamper-Proofing Instruction (TPI, it's similar with the concept of guards proposed by Chang\cite{prot}) to maintain the integrity of the key code segment from malicious modifications. TPI is designed to be similar with the normal Handlers, will be placed in random locations during program creation time. At run time, TPI Handlers will calculate another checksum to compare with the pre\_checksum cached in a virtual register v\_ebp, if the two checksums are equal, there is no tamper occurs, and if not, the program will secretly change the value of the virtual register v\_ebp, next time when v\_ebp is used again, the program will be failed. Furthermore, we introduced the anti-debug techniques when an adversary tries to debug the protected program, the program will know that there is a debugger exist in the host compute, then the program will take some respond measurements. The experiment results indicate that our \VMGuards can provide a good balance between execution rate and overhead, and moreover provide a platform for different program protection techniques.
 
 \section{Acknowledgment}
 
-This work was supported by project National Natural Science Foundation of China (No. 61373177, and No. 61572402),the Key Project of Chinese Ministry of Education (No.211181), the International Cooperation Foundation of Shaanxi Province, China (No. 2013KW01-02, No. 2015KW-003 and No. 2016KW-034), the China Postdoctoral Science Foundation(grant No. 2012M521797), the Research Project of Shaanxi Province Department of Education (No. 15JK1734), and the Research Project of NWU, China (No. 14NW28).
+This work was supported by project National Natural Science Foundation of China (No. 61373177, and No. 61572402),the Key Project of Chinese Ministry of Education (No.211181), the International Cooperation Foundation of Shaanxi Province, China (No. 2013KW01-02, No. 2015KW-003 and No. 2016KW-034), the China Postdoctoral Science Foundation(grant No. 2012M521797), the Research Project of Shaanxi Province Department of Education (No. 15JK1734), and the Research Project of NWU, China (No. 14NW28), and the UK Engineering and Physical Sciences Research Council under grants EP/M01567X/1 (SANDeRs), EP/M015793/1 (DIVIDEND).
 
 
 \bibliographystyle{unsrt}
