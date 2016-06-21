@@ -18,6 +18,8 @@
 % included in the LaTeX package for LNICST as template.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 \documentclass[lnicst,sechang,a4paper]{svmultln}
 \usepackage{amssymb}
 \setcounter{tocdepth}{3}
@@ -36,7 +38,6 @@
 \usepackage[british,english,american]{babel}
 \usepackage{xspace}
 
-\newcommand\FIXME[1]{\textcolor{red}{FIX:}\textcolor{red}{#1}}
 \newcommand{\VMGuards}{\textsc{VMGuards}\xspace}
 
 
@@ -85,15 +86,7 @@
 
 
 \begin{abstract}
-Process-level virtual machine (PVM) based code obfuscation is a viable means
-for protecting software against runtime code tampering and unauthorized code
-reverse engineering. PVM-based approaches rely on a VM to determine how
-instructions of the protected code region are scheduled and executed.
-Therefore, it is crucial important to protect the VM for runtime code
-tampering that alters the instructions and behaviour of the VM. This paper
-presents \VMGuards, a novel PVM-based code protection system that puts the
-security of VM as the first class design concern. Our approach advances prior work by 
-promoting security of the VM as the first class design constraint. 
+Process-level virtual machine (PVM) based code obfuscation is a viable means for protecting software against runtime code tampering and unauthorized code reverse engineering. PVM-based approaches rely on a VM to determine how instructions of the protected code region are scheduled and executed. Therefore, it is crucial important to protect the VM for runtime code tampering that alters the instructions and behaviour of the VM. This paper presents \VMGuards, a novel PVM-based code protection system that puts the security of VM as the first class design concern. Our approach advances prior work by promoting security of the VM as the first class design constraint.
 We achieve this by introducing two new instruction sets to protect the
 internal implementations of critical code segments and the host runtime
 environment where the VM runs in. Our new instruction sets have an identical
@@ -118,7 +111,7 @@ The VM system plays a key role in any PVM-based protection schemes because it de
 Prior approaches on PVM-based code protection work by creating a new section in the program binary to store virtual instructions of protected code regions. This section, however, is vulnerable to advanced attacks where an adversary can use sophisticated tools (e.g. Ollydbg and IDA Pro) to locate the section to uncover information such as VM implementation and virtual instruction sets. Holding such information helps an adversary to get a better understanding of the working mechanism of the VM. As a result, security of the protected code regions will be greatly compromised.
 
 This paper presents \VMGuards, a novel tampering detection system. As a departure from prior work, our approach puts the security of the VM as the first class concern in the system design. We achieve this by providing two new sets of virtual instructions to protect the internal implementation of the VM and the host runtime environment (where the VM runs) against code tampering. Firstly, we design a set of Tamper Proofing Instructions (TPIs) to protect the integrity of internal code implementations. Our TPIs extend the standard virtual instruction by providing additional information for the VM inteperator to check the starting and ending addresses of the protected code region, as well as the checksum of the code to prevent code from unauthorized modifications. Our careful design ensures that TPIs have identical structure as the standard virtual instructions, so that they will not raise suspicion from the attacker's perspective. Secondly, we provide a set of anti-debug instructions to protect the host runtime environment (e.g. operating systems and libraries) where the VM runs in against code tampering. These two instruction sets, putting together, allow us to build a code protection system with stronger VM security than any prior work seen so far.
-By carefully integrating the instructions with the VM implementation, we are able to build a code protection with little extra overhead compared to existing solutions. 
+By carefully integrating the instructions with the VM implementation, we are able to build a code protection with little extra overhead compared to existing solutions.
 
 We evaluated \VMGuards using a set of real-life applications. The experimental results show that \VMGuards provides stronger protection with similar overhead when compared to state-of-the-art code protection systems.
 This paper makes the following specific contributions:
@@ -150,7 +143,7 @@ and to detect any tampering actions performed in the host environment.
     \caption{The framework of \VMGuards. TPI and ADI are two kinds of security instructions, which can ensure the virtual instructions'self-security.}\label{fig:Fig.1}
 \end{figure}
 
-Figure~\ref{fig:Fig.1} depicts the overall approach of \VMGuards. 
+Fig.~\ref{fig:Fig.1} depicts the overall approach of \VMGuards.
 In the figure, K\_C is the key code segment (e.g. the key algorithm the authorization information) to be protected. During static compile time, the segment will be filled up with some junk or useless code.
  A new section, N\_C, will be created to store the generated virtual instructions for K\_C. When executing K\_C, the control will be given to N\_C and the virtual instructions will be dynamically
 translated into native code by a VM.
@@ -158,9 +151,8 @@ The protection scheme of \VMGuards works as follows. Upon the time the program i
 It dissembles the native instructions during program startup. The disassembled instructions then be transformed to a intermediate representation, termed as Virtual Instructions (VIs) in this paper.
 Next, control of the program execution will transfer to the new section (N\_C), until the new section is completely executed. After
  executing the protected code regions, control will give back the program.
- 
-\subsection{Disassembly}
 
+\subsection{Disassembly}
 There are two typical techniques for disassembling a program binary~\cite{flow}: linear disassembly and recursive disassembly. The former begins by disassembling the very first instruction of the program. Once an instruction at an address is disassembled, and is decided to have a length of l bytes, disassembly proceeds to the instruction starting at address addr+l. This process continues to the end of the program. Linear disassembly can be confused by ``gaps'' in code that consist of data or alignment-related padding. These gaps will be interpreted by linear disassembly as instructions and decoded, resulting an erroneous disassembly.
 
 The latter uses a different strategy. It starts with a set of code entry points specified in the binary. For an executable, there may be just one such entry point specified, but for shared libraries, the beginning of each exported functions is specified as well. Unlike linear disassembly, recursive disassembly does not get confused by gaps in code, and hence does not produce incorrect disassembly. Nevertheless, it fails to disassemble code that is reachable only via Indirect Control Flow (ICF) transfers.
@@ -168,18 +160,11 @@ The latter uses a different strategy. It starts with a set of code entry points 
 Our approach combines linear disassembly and recursive disassembly. We utilize linear disassembly to make sure the integrity of the disassembly result and guarantee the correctness of the disassembly result by recursive disassembly.
 
 \subsection{Virtual Instructions}
-
 After disassembled all instructions, we need to transform these disassembled instructions into a mid-expression\cite{pro}, Virtual Instruction (VI), so that they can only be recognized by our \VMGuards when the protected program is executed. Moreover, we have the freedom to design our own VI, this leaves us many choices to make. In this paper, we designed VI to simplify the correspondence between the original instructions and the Handlers, making the design of \VMGuards more concise. While the relationships between the original instructions and virtual instructions, and virtual instructions and Handler are many-to-many, this will increase the difficulty of reverse engineering. The virtual instructions, however, are not stored in the protected program.
 
 In our \VMGuards, there are three main principles to design a reasonable VI sets. First of all, completeness, that's to say, the designed VI must be able to interpret all x86 instructions; Secondly, complexity, a reasonable complexity can lead to a many-to-many relationship, otherwise VI is redundant; Last but not least, functionality, every virtual instruction must has a clearly defined meaning, it can precisely guide an x86 instruction to a certain Handler sequence.
 
-Tamper-proofing instructions and Anti-debug instructions are two most designed security virtual instructions. The former is designed to keep the key code segment of the program from tampering, and the latter can make sure that there are no reverse engineering tools exist on the host machine during the program execution. That's to say, by these two security instructions we can, on one hand, keep the program inner safe, on the other hand, prevent the outside execution environment of the program from malicious tools. The following section4 and section5 will focus on these two virtual instructions, more details will be introduced one by one.
-
-\subsection{Handler Set}
-
-Handler set is short for Hdls. Hdls is consist of multiple Handlers. Handlers are some small instruction segments, and in our design, there are two types of Handlers, one is parameter-free, and the other contains one or more parameters. In one Handler, it may contain one or some of the following operations: mathematical operation, conditional jump operation, assignment operation and special operation. To be clear, in this paper, the Handler is not the common handle in Windows, it's a small piece of program can be invoked by the Dispatcher (will be introduced in the following section), which is used to interpret the original x86 instructions. In other words, every original x86 instruction can be interpreted by several Handlers through a mapping relationship with virtual instructions. That is to say, original x86 instruction firstly should be mapped to virtual instructions, then be interpreted by several Handlers. Figure.~\ref{fig:Fig.2} shows the mapping relationship of the three elements.
-
-As we can see, if we assume the x86 instruction in the first block be the key code segment of the program, at the first step they will be transformed to VI and then mapped to Handlers.
+Tamper-proofing instructions and Anti-debug instructions are two most designed security virtual instructions. By these two security instructions we can, on one hand, keep the program inner safe, on the other hand, prevent the outside execution environment of the program from malicious tools. The following section4 and section5 will focus on these two virtual instructions, more details will be introduced one by one.
 
 \begin{figure}[htb]%Í¼2
     \centering
@@ -187,13 +172,19 @@ As we can see, if we assume the x86 instruction in the first block be the key co
     \caption{Every original x86 instruction maps to several sets of Handlers.}\label{fig:Fig.2}
 \end{figure}
 
-\subsection{Dispatcher}
+\subsection{Handler Set}
+Handler set is short for Hdls. Hdls is consist of multiple Handlers. Handlers are some small instruction segments. In our design, there are two types of Handlers, one is parameter-free, and the other contains one or more parameters. In one Handler, it may contain one or some of the following operations: mathematical operation, conditional jump operation, assignment operation and special operation. To be clear, in this paper, the Handler is not the common handle in Windows, it's a small piece of program can be invoked by the Dispatcher (will be introduced in the following section), which is used to interpret the original x86 instructions. In other words, every original x86 instruction can be interpreted by several Handlers through a mapping relationship with virtual instructions. That is to say, original x86 instruction firstly should be mapped to virtual instructions, then be interpreted by several Handlers. Fig.~\ref{fig:Fig.2} shows the mapping relationship of the three elements.
 
+%As we can see, if we assume the x86 instruction in the first block be the key code segment of the program, at the first step they will be transformed to VI and then mapped to Handlers.
+
+
+
+\subsection{Dispatcher}
 Like buses have dispatching centers, our \VMGuards have Dispatchers, which are used to read and decrypt the VMData (will be introduced in the following section), after decryption the plaintext will be used to calculate the corresponding Handlers'addresses by certain algorithm, and then the program will jump to the accurate address to execute. At this point, we can see that the Dispatcher is a crucial component of the VMInterpreter, which controls the dispatching process to Handler.
 
-So far, so many researches about PVM have targeted on improving the structure of Dispatcher, and currently we can classify the existing structures into three categories: (1) Centralized model; (2) Chained model; and (3) Hybrid model. In this paper, we prefer to employ the third one. Because it's easy to reverse engineering the centralized model to find the only one Dispatcher, further to locate all the Handlers which called by the Dispatcher. For the chained model, it's one way in and one way out, Handles in chained model Dispatcher are called by an offset from one to another, as long as the adversary find the jmp instruction behind every Handler, he can get all Handlers, furthermore reverse engineering the whole program.
+So far, so many researches about PVM have targeted on improving the structure of Dispatcher, and currently we can classify the existing structures into three categories: Centralized model, Chained model, and Hybrid model. In this paper, we prefer to employ the third one. Because it's easy to reverse engineering the centralized model to find the only one Dispatcher, further to locate all the Handlers which called by the Dispatcher. For the chained model, it's one way in and one way out. Handles in chained model Dispatcher are called by an offset from one to another, as long as the adversary find the jmp instruction behind every Handler, he can get all Handlers, furthermore reverse engineering the whole program.
 
-That is the reason why we choose to combine the Centralized model and the Chained model together to improving the security of Dispatcher's structure. There are following advantages by improving the design of the Dispatcher's structure. Firstly, an adversary cannot gather the whole dispatching procedure through only one fixed Dispatcher's address; Secondly, we designed all these Dispatchers similar to the normal Handlers, and after a Handler is executed, it randomly returns to one of these Dispatchers or Handlers, so as an adversary, he cannot easily figure it out which one is Dispatcher and which one is Handler. Figure~\ref{fig:Fig.3} gives a sketch map of the structure.
+We choose to combine the Centralized model and the Chained model together to improving the security of Dispatcher's structure. There are following advantages. Firstly, an adversary cannot gather the whole dispatching procedure through only one fixed Dispatcher's address; Secondly, we designed all these Dispatchers similar to the normal Handlers, and after a Handler is executed, it randomly returns to one of these Dispatchers or Handlers, so as an adversary, he cannot easily figure it out which one is Dispatcher and which one is Handler. Fig.~\ref{fig:Fig.3} gives a sketch map of the structure.
 
 \begin{figure}[htb]%Í¼3
     \centering
@@ -202,15 +193,16 @@ That is the reason why we choose to combine the Centralized model and the Chaine
 \end{figure}
 
 \subsection{VMData}
-
-As we can see from figure~\ref{fig:Fig.3}, VMData is an encrypted data used to drive the Handler to execute, and it's an encrypted being executed Handler sequence. More specifically, the VMInterpreter chooses Handler to execute based on the VMData read in the Dispatcher. Seeing from subsection 3.3, there are two kinds of Handler, to the one that contains one or more parameters, VMData also provide an encrypted data to the parameters to further obfuscate the Handler number and the parameters.
+As we can see from Fig.~\ref{fig:Fig.3}, VMData is an encrypted data used to drive the Handler to execute, and it's an encrypted being executed Handler sequence. More specifically, the VMInterpreter chooses Handler to execute based on the VMData read in the Dispatcher. Seeing from subsection 3.3, there are two kinds of Handler, to the one that contains one or more parameters. VMData also provide an encrypted data to the parameters to further obfuscate the Handler number and the parameters.
 
 So many crucial information, VMData included, will be used by the VMInterpreter, that's why we usually protect them with an encryption mechanism. Correctly generating the VMData is the key to accurately dispatching the Handler, therefore, the specific meaning of the VMData is closely related to the Dispatcher.
 
 
 \section{Tamper-Proofing Instruction}
 
-The concept of guards was first proposed by Chang and Atallah\cite{prot} as a tamper-proofing mechanism. Part of this scheme is a checking primitive-code checksum, which calculates the checksum of a protected code segment. Existing researches on software guards have gained so much successes\cite{dyn,obl,sof,uni}. However, these implementations is either simple structure or high overhead. As we know, in Chang's scheme, guards is said that reading the code segment tends to stick out as an atypical operation during execution, the adversary then can usually pin-point the checks by setting breakpoints or examining the code. The main drawback of guards-net is that the complexity will result in higher overhead and longer execution time, this is the disadvantage to debug and optimize the program for the software developers; moreover, the function of every guard is the same, and all guards are run in the host process. Thus, an adversary can locate one guard by debugging the process, then he can disable them all.
+The concept of guards was first proposed by Chang and Atallah\cite{prot} as a tamper-proofing mechanism. Part of this scheme is a checking primitive-code checksum, which calculates the checksum of a protected code segment. Existing researches on software guards have gained so much successes\cite{dyn,obl,sof,uni}. However, these implementations is either simple structure or high overhead. In Chang's scheme, guards is said that reading the code segment tends to stick out as an atypical operation during execution, the adversary then can usually pin-point the checks by setting breakpoints or examining the code. The main drawback of guards-net is that the complexity will result in higher overhead and longer execution time, this is the disadvantage to debug and optimize the program for the software developers. Moreover, the function of every guard is the same, and all guards are run in the host process. Thus, an adversary can locate one guard by debugging the process, then he can disable them all.
+
+In this paper, we introduced Tamper-Proofing Instruction, TPI for short, which is consist of existing Handlers.  TPI achieves the same function as guards, but presents as normal Handlers. By this very design, on one hand, the key code segment of the program is detected and protected by TPI, on the other hand, the structure of TPI Handler will be obfuscated with normal Handlers, making it troublesome to recognize which Handler determines the function of TPI. Furthermore, we designed multiple kinds of TPI to against the attack that the adversary can remove all checkpoints just from one, and every two TPI are crossed with each other to make sure that when an adversary can locate and remove one TPI, the other one can detect the tamper behavior in time. Fig.~\ref{fig:Fig.4} shows the basic organization structure of the TPI, it's like a ring, so we call it TPI-ring. In the figure, TPI1 and TPI2 are interleaved, TPI2 and TPI3 are interleaved, and their protection ranges are fixed length. If an adversary can locate TPI1 successfully and remove it from the TPI-ring, TPI2 and the last TPI can detect the behavior in time, to make sure they cannot be tampered.
 
 \begin{figure*}[htb]
 \centering
@@ -230,22 +222,21 @@ The concept of guards was first proposed by Chang and Atallah\cite{prot} as a ta
 \end{minipage}
 \end{figure*}
 
-In this paper, we introduced Tamper-Proofing Instruction, TPI for short, which is consist of existing Handlers, to achieve the same function as guards, but presents as normal Handlers. By this very design, on one hand, the key code segment of the program is detected and protected by TPI, on the other hand, the structure of TPI Handler will be obfuscated with normal Handlers, making it troublesome to recognize which Handler determines the function of TPI. Furthermore, we designed multiple kinds of TPI to against the attack that the adversary can remove all checkpoints just from one, and every two TPI are crossed with each other to make sure that when an adversary can locate and remove one TPI, the other one can detect the tamper behavior in time. Figure~\ref{fig:Fig.4} shows the basic organization structure of the TPI, it's like a ring, so we call it TPI-ring, where we can see, TPI1 and TPI2 are interleaved, TPI2 and TPI3 are interleaved, and their protection ranges are fixed length. If an adversary can locate TPI1 successfully and remove it from the TPI-ring, TPI2 and the last TPI can detect the behavior in time, to make sure they cannot be tampered.
 
 If we assume that the start address of TPI1 is the beginning address of the key code segment. The main challenge here is to handle the last TPI's protection range. We can clearly see that the last protection range is divided into two parts, the start address is in the middle of TPI(n-1), and the end address is in the middle of TPI1. So how can we handle this situation? Here is our solution, first we calculate a checksum1 from the start address of the last TPI to the end of key code segment, then calculate a checksum2 from the start of the key code segment to the end address of the last TPI, we use the sum of checksum1 and checksum2 as the checksum of the last TPI, either checksum1 or checksum2 is tampered, TPI(n-1) or TPI1 can find it.
 
-Figure~\ref{fig:Fig.5} shows the TPI handlers. In our implementation, there are three different Handlers used to achieve the goal of TPI-to detect and response the tamper behavior when an adversary is tampering the protected program. They will be placed in random locations during the program creation phase. Furthermore, during execution time, they will not be closely executed one after another, in another words, the execution of TPI\_b may not be closely after TPI\_a, and TPI\_c's execution may not be closely after TPI\_b, but the relative execution order of TPI\_a, TPI\_b and TPI\_c is fixed. When TPI\_c is really executed, these three Handlers do play the role of guards. The `nop' among the virtual instructions will be filled up with the exact decryption virtual instructions during program creation time. To every para\_1 in every TPI Handler, the function of them are:
+Fig.~\ref{fig:Fig.5} shows the TPI handlers. In our implementation, there are three different Handlers used to achieve the goal of TPI-to detect and response the tamper behavior when an adversary is tampering the protected program. They will be placed in random locations during the program creation phase. Furthermore, during execution time, they will not be closely executed one after another, in another words, the execution of TPI\_b may not be closely after TPI\_a, and TPI\_c's execution may not be closely after TPI\_b, but the relative execution order of TPI\_a, TPI\_b and TPI\_c is fixed. When TPI\_c is really executed, these three Handlers do play the role of guards. The `nop' among the virtual instructions will be filled up with the exact decryption virtual instructions during program creation time. To every para\_1 in every TPI Handler, the function of them are:
 \begin{itemize}
   \item Load the pre\_checksum which we calculated before the program execution and stored it in a register (v\_ebp) after some math operation.
   \item Load the start address of the protection range and push it in  v\_eax.
   \item Load the end address of the protection range and push it in v\_ecx, during the real execution of the program, the program will dynamically re-calculate a checksum from the relative start and end address one more time.
 \end{itemize}
 
-In our implementation, during program run time, the value of v\_ebp will be restored through the relative math operation on one hand, and on the other hand, compare this checksum with the stored pre\_checksum, if they are equal , there is no tampering happened, and if not, the program will take some necessary counter measures to stop the tampering, for example,alter the user with a MessageBox to remind him that the program is being tampered, or just terminate the execution of the program and so on. Note that there is a para\_2 after every TPI Handler, we designed para\_2 to realize the centralized and chained dispatching model, that's to say, after a TPI Handler is executed, it will jump to the next to be executed Handler to continue execution or jump back to one of the Dispatchers. In fact, every normal Handler at least has one parameter, to determine that executed handler will jump to the next Handler or Dispatcher.
+In our implementation, during program run time, the value of v\_ebp will be restored through the relative math operation on one hand, and on the other hand, compare this checksum with the stored pre\_checksum, if they are equal , there is no tampering happened, and if not, the program will take some necessary counter measures to stop the tampering. For example, alter the user with a MessageBox to remind him that the program is being tampered, or just terminate the execution of the program and so on. Note that there is a para\_2 after every TPI Handler, we designed para\_2 to realize the centralized and chained dispatching model. That's to say, after a TPI Handler is executed, it will jump to the next to be executed Handler to continue execution or jump back to one of the Dispatchers. In fact, every normal Handler at least has one parameter, to determine that executed handler will jump to the next Handler or Dispatcher.
 
 \section{Anti-debug Protection}
 
-As we know, when we try to debug some virus programs, anti-debug techniques will be used to thwart this behavior. In another word, the virus program to be debugged can detect whether there is a debugger attached to itself once the anti-debug techniques are applied. Assumption that the program can ``feel'' that it's being debugged, it can make sure that someone is trying to crash itself using a debugger or disassembler.
+When we try to debug some virus programs, anti-debug techniques will be used to thwart our behavior. In another word, the virus program to be debugged can detect whether there is a debugger attached to itself once the anti-debug techniques are applied. Assumption that the program can ``feel'' that it's being debugged, it can make sure that someone is trying to crash itself using a debugger or disassembler.
 
 Debugger is a software can be used to debug the operating system kernel, which running between CPU and operating system, working on layer Ring0. SoftICE, for example, is one debugger of NuMega Company, in addition, OllyDbg and TRW2000 are also popular debuggers. Such debuggers can load PE file into the memory, run the PE file at single step, or set breakpoint in the PE file. If assume that there is no mechanisms like anti-debug, the adversary then owns the ability such as step tracing, breakpoint setting to the program, what's more, he can using the result of tracing analysis-registration algorithm-to program a register.
 
@@ -253,11 +244,11 @@ In this paper, we designed five monitoring ADHandlers and two processing ADHandl
 
 Five monitoring ADHandlers:
 \begin{description}
-  \item[1)] \textbf{BeingDebugged flag.}IsDebuggerPresent is a function stated in kernel32.dll, by which we can detect whether the current process is being debugged or not. If the process is being debugged, the BeingDebugged flag will be set to `1', if not, it will be `0'.
-  \item[2)] \textbf{FindWindow.}The function is used to retrieve and process the strings specified by class name of top-level window and window name, but it don't retrieve the child window.
-  \item[3)] \textbf{CheckRemoteDebuggerPresent.}This is another Win32 Debugging API function; it can be used to check if a remote process is being debugged. However, we can also use this as another method for checking whether our own process is being debugged.  CheckRemoteDebuggerPresent calls the NTDLL export NtQueryInformationProcess with the SYSTEM\_INFORMA-TION\_CLASS set to 7(ProcessDebugPort). Additionally, the ``Remote'' here does not imply that the debugger necessarily resides on a different computer; instead, it indicates that the debugger resides in a separate and parallel process. Using the IsDbuggerPresent function to detect whether the calling process is running under the debugger. Lastly, if the function succeeds, the return value is nonzero, and if not, the value will be zero. To get extended error information, call GetLastError.
-  \item[4)] \textbf{Execution Time Difference.}When the process is being debugged, the CPU cycle will be taken up by debugger event, such as handling codes and step over instructions. If the time cost for executing two adjacent instructions is somewhat huge different with executing normal ones, that indicates the process maybe being debugged currently.
-  \item[5)] \textbf{OllyDbg Detection.}So much like the ``Detect Debugger Process'', OllyDbg Detection just focuses on the character ``OLLYDBG'' exist in the process list.
+  \item[1)] \textbf{BeingDebugged flag } IsDebuggerPresent is a function stated in kernel32.dll, by which we can detect whether the current process is being debugged or not. If the process is being debugged, the BeingDebugged flag will be set to `1', if not, it will be `0'.
+  \item[2)] \textbf{FindWindow } The function is used to retrieve and process the strings specified by class name of top-level window and window name, but it don't retrieve the child window.
+  \item[3)] \textbf{CheckRemoteDebuggerPresent } This is another Win32 Debugging API function; it can be used to check if a remote process is being debugged. However, we can also use this as another method for checking whether our own process is being debugged.  CheckRemoteDebuggerPresent calls the NTDLL export NtQueryInformationProcess with the SYSTEM\_INFORMA-TION\_CLASS set to 7(ProcessDebugPort). Additionally, the ``Remote'' here does not imply that the debugger necessarily resides on a different computer; instead, it indicates that the debugger resides in a separate and parallel process. Using the IsDbuggerPresent function to detect whether the calling process is running under the debugger. Lastly, if the function succeeds, the return value is nonzero, and if not, the value will be zero. To get extended error information, call GetLastError.
+  \item[4)] \textbf{Execution Time Difference } When the process is being debugged, the CPU cycle will be taken up by debugger event, such as handling codes and step over instructions. If the time cost for executing two adjacent instructions is somewhat huge different with executing normal ones, that indicates the process maybe being debugged currently.
+  \item[5)] \textbf{OllyDbg Detection } So much like the ``Detect Debugger Process'', OllyDbg Detection just focuses on the character ``OLLYDBG'' exist in the process list.
 \end{description}
 
 Two processing ADHandlers: \textbf{ExitProecss} and \textbf{MessageBox}. We only designed these two simple example response Handler for handling the monitoring ADHandlers. As what's literally, ExitProcess is designed to exit the debugged process when it is detected being debugged, and MessageBox is a little `gentle', when it detects a debugger, it just pop-up a warning MessageBox to the user, the user will decide what next will do, restart the process or terminate it directly.
@@ -266,7 +257,7 @@ For a better trade-off of performance and overhead, we applied the idea of diver
 
 \section{Evaluation and Discussion}
 
-We designed a PoC prototype used to implement TPI and Anti-debug, which is built on a process-level virtual machine, called \VMGuards. \VMGuards runs as co-routine with the being protected program which will be firstly loaded and checked. Then \VMGuards will do some pre-processing tasks, for instance, disassembling the key code segment of the program marked previously by hand, generating multiple handler sets. These information will be stored in a new section. During program execution, \VMGuards will take over the execution control when it executes to the key code segment. Then the new section executes and transfers control back to the original program. The program will continue executing to the end.
+We designed a Proof-of-Concept prototype used to implement TPI and Anti-debug, which is built on a process-level virtual machine, called \VMGuards. \VMGuards runs as co-routine with the being protected program which will be firstly loaded and checked. Then \VMGuards will do some pre-processing tasks, for instance, disassembling the key code segment of the program marked previously by hand, generating multiple handler sets. These information will be stored in a new section. During program execution, \VMGuards will take over the execution control when it executes to the key code segment. Then the new section executes and transfers control back to the original program. The program will continue executing to the end.
 
 
 \subsection{Experimental Setup}
@@ -360,12 +351,13 @@ In order to accurately calculate the execution time of different TPI length, we 
     \caption{Runtime Overhead}\label{fig:Fig.6}
 \end{figure}
 
-Figure~\ref{fig:Fig.6} shows the test results, since different applications, different key-code segment length, different difficulty level of key-code segment, the execution time is obviously different with each other, figure6\_1 represented the all test result, as we can see, it's not clear when we focus on the results of Hviewer, Calculator, and Csnake, so we drew anther four subfigure, figure6\_2 shows the test result of Compress, and figure6\_3 to Hviewer, figure6\_4 to Calculator, figure6\_5 to Csnake. Table3 shows the test result in detail. Take IpMsg.exe as an example, when TPI length is 0, that's to say, we didn't insert any TPI Handler into the protection area, the execution time correspond to the original one. To be clear, we collected 20 different execution time and calculate the average value, so when TPI length is 32 bytes (means the protection range is 32 bytes), the average execution time of the key-code segment is 4462¦Ìs, in the same way, when TPI length is 16 bytes and 8 bytes, the average execution times are 4557\textmu s and 4761\textmu s.
+Fig.~\ref{fig:Fig.6} shows the test results, since different applications, different key-code segment length, different difficulty level of key-code segment, the execution time is obviously different with each other, figure6\_1 represented the all test result, as we can see, it's not clear when we focus on the results of Hviewer, Calculator, and Csnake, so we drew anther four subfigure, figure6\_2 shows the test result of Compress, and figure6\_3 to Hviewer, figure6\_4 to Calculator, figure6\_5 to Csnake. Table~\ref{tbl:TPI} shows the test result in detail. Take IpMsg.exe as an example, when TPI length is 0, that's to say, we didn't insert any TPI Handler into the protection area, the execution time correspond to the original one. To be clear, we collected 20 different execution time and calculate the average value, so when TPI length is 32 bytes (means the protection range is 32 bytes), the average execution time of the key-code segment is 4462¦Ìs, in the same way, when TPI length is 16 bytes and 8 bytes, the average execution times are 4557\textmu s and 4761\textmu s.
 
 %table4
 \begin{table}[htb]
 \centering
 \caption{Execution Time (\textmu s) of different TPI Length}
+\label{tbl:TPI}
 \begin{tabular}{c|c|c|c|c}
 \hline
            & 0     & 32    & 16     & 8      \\ \hline
@@ -384,9 +376,7 @@ In order to see the execution time increment transparently, we defined:
   T\_Incre_{rate}= \Delta Time / O\_Time
 \end{equation}
 
-We used the formula to calculate an increment for different TPI length. From Figure~\ref{fig:Fig.7}, as the same, we taked IpMsg.exe as an example, when TPI length is 32 bytes, the increment is 7.8\%,when TPI length are 16 bytes and 8 bytes, the increment are 10.1\% and 15.02\% separately. Pay attention, the unit of time is microsecond(\textmu s). You cannot even ``feel'', the application is finished execution.
-
-That's to say, the TPI Handlers we designed are practically useful and time consuming is tolerable. And by default, we set TPI length to 16 bytes, as we can see that when TPI length is 16 bytes, the increment of execution time is around 17\%. Obviously, 16 bytes length is the most reasonable protection range.
+We used the formula to calculate an increment for different TPI length. From Fig.~\ref{fig:Fig.7}, as the same, we taked IpMsg.exe as an example, when TPI length is 32 bytes, the increment is 7.8\%,when TPI length are 16 bytes and 8 bytes, the increment are 10.1\% and 15.02\% separately. Pay attention, the unit of time is microsecond(\textmu s). You cannot even ``feel'', the application is finished execution.
 
 %table3
 %figure7,figure8
@@ -415,11 +405,11 @@ That's to say, the TPI Handlers we designed are practically useful and time cons
 
 Our instrumentation adds a new code section to the original program that is on average 1.03 times the original code size. The new section contains more than one Dispatcher to assign Handlers jump to the right addresses to execution. The Dispatchers are mostly like an address translation table for every Handler.
 
-Figure~\ref{fig:Fig.8} shows different applications average running memory costs, the blue bar-graph represented the memory costs when the original programs are running. Correspondingly, the red bar-graph shows the memory costs when the protected programs are running. In total, the space overhead for \VMGuards is 117\% over the original program. Note that although the file size has increased, execution must be confined to the new code. Except in the case of programs that store read-only data in their code, other program don't access their code even once. Hence the runtime memory overhead is unaffected by the presence of the original copy of file.
+Fig.~\ref{fig:Fig.8} shows different applications average running memory costs, the blue bar-graph represented the memory costs when the original programs are running. Correspondingly, the red bar-graph shows the memory costs when the protected programs are running. In total, the space overhead for \VMGuards is 117\% over the original program. Note that although the file size has increased, execution must be confined to the new code. Except in the case of programs that store read-only data in their code, other program don't access their code even once. Hence the runtime memory overhead is unaffected by the presence of the original copy of file.
 
 \subsubsection{Performance of \VMGuards}
 
-We tested the applications shown in Table2 with commercial software Code Virtualizer1.3.1.0 (short for CV) and VMProtect1.7.0 (short for VMP) compared with our \VMGuards.  We set CV to the lowest protection strength, and VMP to the fastest execution time. Figure~\ref{fig:Fig.9} shows the average file size and average execution time change.
+We tested the applications shown in Table~\ref{tbl:usecases} with commercial software Code Virtualizer1.3.1.0 (short for CV) and VMProtect1.7.0 (short for VMP) compared with our \VMGuards.  We set CV to the lowest protection strength, and VMP to the fastest execution time. Fig.~\ref{fig:Fig.9} shows the average file size and average execution time change.
 
 %figure9
 \begin{figure}[htb]
@@ -431,23 +421,23 @@ We tested the applications shown in Table2 with commercial software Code Virtual
 \end{figure}
 
 
-As we can see from Figure~\ref{fig:Fig.9}, comparing with commercial software, our \VMGuards does not extra increase the space overhead. However, about runtime overhead, our \VMGuards showed some unstable results.
+As we can see from Fig.~\ref{fig:Fig.9}, comparing with commercial software, our \VMGuards does not extra increase the space overhead. However, about runtime overhead, our \VMGuards showed some unstable results.
 
 Reasons can be, a) x86 instruction whether it's different type or different address model, when \VMGuards, as we described before, is interpreting execution, Handler sequences used to interpret VI are different from each other, b) there still exist some x86 instructions cannot be interpreted by existing Handlers, program needs to retreat from \VMGuards, executing the x86 instruction by host machine then back to \VMGuards, continue interpreting execution the left VI. Thus, the runtime overhead can be huge, c) owing to the design of multiple Dispatchers, execution time to different instances can be short or long, and we need to further study on it.
 
 \subsection{Case Study}
 
- Recall the design goal of \VMGuards is to  improve the security of PVM through two security instructions: TPI and ADI. 
+ Recall the design goal of \VMGuards is to  improve the security of PVM through two security instructions: TPI and ADI.
  In this section, we evaluate the security guarantee of TPI and ADI through both experiments and theoretical analysis.
 
-For our experiments, we have recruited 40 participants. Among those participants, 20 volunteers \FIXME{arrrrgh!! have no idea what are you talking about here. What do you mean knowing the basic framework of VMGuards but don't know the improved points???} and the other 20 volunteers act as attackers to try their best to break our test cases listed in Table~\ref{tbl:usecases}.
+ For our experiments, we have recruited 40 participants. Among those participants, 20 volunteers just know the framework of \VMGuards, and others can well understand the \VMGuards. Both of them act as attackers trying their best to break our test cases listed in Table~\ref{tbl:usecases}.
 %Additionally, we had 20 people as a group who knew the basic framework of \VMGuards, but did not know the improved points, and another 20 people interest in crack programs to help us experiment the security of TPI and ADI through their efforts to break the protected test cases mentioned in Table2.
 
 \subsubsection{Security of Tamper-Proofing Instruction}
 
-As described in Section 4, we organized our Tamper-Proofing Instruction into a ring. Comparing with guards net, TPI-Ring reduced the space overhead brought by complex network theoretically. However, TPI Handlers in TPI-ring didn't lower the self-security of TPI Handlers. We can also see from Figure~\ref{fig:Fig.4} that every TPI Handler is crossed with each other. In another word, there are at least 3 TPI Handlers protecting one address segment when the protected program is running. Stand by the adversary's side, when he tries to break the TPI-Ring, unless he can remove all the TPI Handlers at one time, he would not get what he wants.
+As described in Section 4, we organized our Tamper-Proofing Instruction into a ring. Comparing with guards net, TPI-Ring reduced the space overhead brought by complex network theoretically. However, TPI Handlers in TPI-ring didn't lower the self-security of TPI Handlers. We can also see from Fig.~\ref{fig:Fig.4} that every TPI Handler is crossed with each other. In another word, there are at least 3 TPI Handlers protecting one address segment when the protected program is running. Stand by the adversary's side, when he tries to break the TPI-Ring, unless he can remove all the TPI Handlers at one time, he would not get what he wants.
 
-In order to clearly see the TPI-Ring, we did some modification to re-organize and centralize the whole function TPI's three handler together. Based on some reverse-engineering experiences, we found three sets TPIs which deployed in the virtual instructions. See from Table4.
+In order to clearly see the TPI-Ring, we did some modification to re-organize and centralize the whole function TPI's three handler together. Based on some reverse-engineering experiences, we found three sets TPIs which deployed in the virtual instructions. See from Table~\ref{tbl:area}.
 \newline
 
 \makeatletter\def\@captype{table}\makeatother
@@ -461,6 +451,7 @@ In order to clearly see the TPI-Ring, we did some modification to re-organize an
 \textbf{0043E2FC} & 04 83 C2  02 & 87  14 24 8B \\ \hline
 \end{tabular}
 \caption{TPI protected area.}
+\label{tbl:area}
 \end{minipage}%
 \makeatletter\def\@captype{figure}\makeatother
 \begin{minipage}[b]{0.54\linewidth}
@@ -471,35 +462,11 @@ In order to clearly see the TPI-Ring, we did some modification to re-organize an
 \end{minipage}
 %figure10
 
-As described in section 6.1, we set the length of TPI to 16 bytes.  Based on the idea of cross protection, the start addresses and the end addresses of the three sets TPI are 0043E2E4-0043E2F4, 00E3E2EC-0043E2FC, and 0043E2F4-0043E304. For demonstration, we employed a simple checksum algorithm, add the data of the protection range with 4 bytes length up together. During program execution, it will loop to re-compute a checksum1 from the start address to the end address. If we assume that we choose the second set of TPI to test the functionality, firstly, TPI\_a will decrypt out a checksum (1BEE37B2), then TPI\_b and TPI\_c will find the start address (00E3E2EC) and the end address (0043E2FC). Figure~\ref{fig:Fig.10} is a part of original TPI Handler.
+As described in section 6.1, we set the length of TPI to 16 bytes.  Based on the idea of cross protection, the start addresses and the end addresses of the three sets TPI are 0043E2E4-0043E2F4, 00E3E2EC-0043E2FC, and 0043E2F4-0043E304. For demonstration, we employed a simple checksum algorithm, add the data of the protection range with 4 bytes length up together. During program execution, it will loop to re-compute a checksum1 from the start address to the end address. If we assume that we choose the second set of TPI to test the functionality, firstly, TPI\_a will decrypt out a checksum (1BEE37B2), then TPI\_b and TPI\_c will find the start address (00E3E2EC) and the end address (0043E2FC). Fig.~\ref{fig:Fig.10} is a part of original TPI Handler.
 
-Here is our spark point comparing the normal checksum algorithm, as we know, the value of a register will be frequently invoked during program execution, we didn't just simply compare the pre\_checksum with the checksum re-calculated during the program execution, but minus the pre\_checksum with the value of a register (EBP), loop accumulating to restore the value of EBP, see figure~\ref{fig:Fig.11}. If the value of EBP is not changed, there is no tamper occurred, otherwise, the program will be crashed when it comes to invoke EBP.
-
-%figure11
-\begin{figure*}[htb]
-\centering
-\begin{minipage}[b]{0.5\linewidth}
-\centering
-\includegraphics[width=2.4in]{figure/11.pdf}
-\captionsetup{justification=centering}
-\caption{Sample of Tamper-Proofing Instruction\\  }
-\label{fig:Fig.11}
-\end{minipage}%
-\begin{minipage}[b]{0.5\linewidth}
-\centering
-\includegraphics[width=2.3in]{figure/14.pdf}
-\captionsetup{justification=centering}
-\caption{Statistics result in 100 times executions, M for Monitor Handler, P for Process Handler}
-\label{fig:Fig.14}
-\end{minipage}
-\end{figure*}
-
+Here is our spark point comparing the normal checksum algorithm. The value of a register will be frequently invoked during program execution, we didn't just simply compare the pre\_checksum with the checksum re-calculated during the program execution. We minus the pre\_checksum with the value of a register (EBP), loop accumulating to restore the value of EBP, see Fig.~\ref{fig:Fig.11}. If the value of EBP is not changed, there is no tamper occurred, otherwise, the program will be crashed when it comes to invoke EBP.
 
 Theoretically, if we modified some data within the second TPI's protection range, we believe that not only the three TPIs, but also the whole TPI-ring can aware the tamper behavior.
-
-\subsubsection{Effectiveness of Anti-Debug Instruction}
-
-Assuming that Tamper Proofing Instructions prevent the program itself from modifying, we applied Anti-Debug Instruction to guarantee that the execution environment of the program is harmless. As described in Section5, we designed seven anti-debug security instructions, that's to say, we designed seven different Handlers to achieve the goal of all these anti-debug instructions.
 
 %figure12
 %figure13
@@ -521,17 +488,38 @@ Assuming that Tamper Proofing Instructions prevent the program itself from modif
 \end{minipage}
 \end{figure*}
 
-Experimentally, \VMGuards randomly chose the Execution\_Time\_Difference monitor Handler to detect whether the program is being debugged during protection procedure, as we can see from Figure~\ref{fig:Fig.12}.
 
-Processing Handler will be chosen to respond to the monited debugging behavior, see from Figure~\ref{fig:Fig.13}. The MessageBox Handler was chosen to respond to the Execution\_Time\_Difference Handler.
+\subsubsection{Effectiveness of Anti-Debug Instruction}
+
+Assuming that Tamper Proofing Instructions prevent the program itself from modifying, we applied Anti-Debug Instruction to guarantee that the execution environment of the program is harmless. As described in Section5, we designed seven anti-debug security instructions, that's to say, we designed seven different Handlers to achieve the goal of all these anti-debug instructions.
+
+Experimentally, \VMGuards randomly chose the Execution\_Time\_Difference monitor Handler to detect whether the program is being debugged during protection procedure, as we can see from Fig.~\ref{fig:Fig.12}.
+
+Processing Handler will be chosen to respond to the monited debugging behavior, see from Fig.~\ref{fig:Fig.13}. The MessageBox Handler was chosen to respond to the Execution\_Time\_Difference Handler.
 
 In every execution, the program will randomly choose one of the five monitor ADI Handler to detect, for example, whether the program under the condition that there is a debugger attacked to itself, or the execution time differences are so different. If the chosen executed monitor ADI is happen to be detected, then the program will randomly choose one of the two processing ADI to alter user that the program is being debugged with a MessageBox or just terminate the program roughly.
 
+Fig.~\ref{fig:Fig.14} shows 100 times the execution results of the protected program. As mentioned before, which monitor Handler and Processing Handler will be chosen to execution are all depend on the random number, as a result, the statistics results are not inexorable law to follow.
 
-%figure14
+%figure11
+\begin{figure*}[htb]
+\centering
+\begin{minipage}[b]{0.5\linewidth}
+\centering
+\includegraphics[width=2.4in]{figure/11.pdf}
+\captionsetup{justification=centering}
+\caption{Sample of Tamper-Proofing Instruction\\  }
+\label{fig:Fig.11}
+\end{minipage}%
+\begin{minipage}[b]{0.5\linewidth}
+\centering
+\includegraphics[width=2.3in]{figure/14.pdf}
+\captionsetup{justification=centering}
+\caption{Statistics result in 100 times executions, M for Monitor Handler, P for Process Handler}
+\label{fig:Fig.14}
+\end{minipage}
+\end{figure*}
 
-
-Figure~\ref{fig:Fig.14} shows 100 times the execution results of the protected program. As mentioned before, which monitor Handler and Processing Handler will be chosen to execution are all depend on the random number, as a result, the statistics results are not inexorable law to follow.
 
 \subsection{Discussion}
 
@@ -553,14 +541,14 @@ Hardware-based approaches are somewhat monetary cost and basically cannot be cir
 
 On the contrast, software-based approaches are used more generally. Chang\cite{prot} proposed the original guards used to tamper-proofing, which employed the idea of checksum guards to protect the integrity of an application. After which, Horne\cite{ind} et al. came up with the concept of tester, which is similar to the guards, consisting of a sequence of instructions that calculated a hash value of  fixed length addresses, during the program runtime, comparing the hash value with a corrector.
 
-Oblivious hashing\cite{tamp,obl} is a tamper-proofing technique that computes hash values based on the real execution path of the application. Owing to the vulnerabilities of static checksums\cite{gen}, various measurements have been proposed to solve the problems, such as knots\cite{sof}, self-sensing guards\cite{def}.
+%Oblivious hashing\cite{obl,tamp} is a tamper-proofing technique that computes hash values based on the real execution path of the application. Owing to the vulnerabilities of static checksums\cite{gen}, various measurements have been proposed to solve the problems, such as knots\cite{sof}, self-sensing guards\cite{def}.
 
 Obfuscation techniques also have been broadly used to the area of software tamper-proofing to make it troublesome for an adversary to understand and analyse the original code of an application. Collberg et al. provided numbers of obfuscation techniques to obscure the code\cite{man,tax}. Linn et al. designed a novel technique to disturb the disassembly of the code\cite{obfu}. Wang et al. proposed the use of indirect branches to obfuscate the control flow of a program. Encryption the program code is another way to solid the program, the specific hardware can decode the code (i.e., a secure co-processor\cite{appr}), but as we mentioned before, its cost a lot than other software-based approaches. Nevertheless, these static obfuscation techniques is vulnerable to some dynamic analysis techniques\cite{sil}.
 
 \vspace{2ex}
 \noindent\textbf{Process-Level Virtual Machine}\hspace{1ex}Among numbers of software-based tamper-proofing techniques, virtualization is a milestone which improved the protection techniques, especially in runtime protection scenario. Currently, a number of commercial PVM have been created, such as VMProtect\cite{vmp}, Code Virtualizer\cite{code} and Themida\cite{the}. These tools protect the program using a mid-expression ¨C Instruction Set Architecture (ISA)\cite{pro} and the code will be interpreted during program run time.
 
-Among the existing research about PVM, almost each of them integrates various protection techniques together. Literature\cite{def} merged the idea of diversity together with virtual machine, proposing a diversity software protection model based on virtual machine. They also designed a software protection RSIC-based virtual machine, it's the first work that merge the diversity with VM; also, literature\cite{mult} introduced the concept of multi-stage binary code obfuscation to obscure a program. It will first proceed n times control flow obfuscation at the beginning of the VM protection£¬then it will choose the key code segment to be protected, moreover, their work also adopted the centralized and chained dispatching model. This is the first research work to improve the VM's dispatching structure, one basic block a time to serve as the dispatching unit, and combined the multiple-level obfuscation, to furthermore enhance the protection strength of the VM; literature\cite{bus} presented another VM protection method based on adaptive dynamic instruction set, it dug down virtual machine protection mechanism, enhancing the execution efficiency and security of the protected program; literature\cite{def} further merged the virtual junk instruction sequence and virtual instruction obscure transformation technique together, and moreover it improved the design of virtual instruction set, making it much harder for an adversary to reverse-engineering the protected program. All in all, the research on PVM is much valuable than it appears.
+Among the existing research about PVM, almost each of them integrates various protection techniques together. Literature\cite{def} merged the idea of diversity together with virtual machine, proposing a diversity software protection model based on virtual machine. They also designed a software protection RSIC-based virtual machine, it's the first work that merge the diversity with VM; also, literature\cite{mult} introduced the concept of multi-stage binary code obfuscation to obscure a program. It will first proceed n times control flow obfuscation at the beginning of the VM protection£¬then it will choose the key code segment to be protected, moreover, their work also adopted the centralized and chained dispatching model. This is the first research work to improve the VM's dispatching structure, one basic block a time to serve as the dispatching unit, and combined the multiple-level obfuscation, to furthermore enhance the protection strength of the VM; literature\cite{sof} presented another VM protection method based on adaptive dynamic instruction set, it dug down virtual machine protection mechanism, enhancing the execution efficiency and security of the protected program; literature\cite{ware} further merged the virtual junk instruction sequence and virtual instruction obscure transformation technique together, and moreover it improved the design of virtual instruction set, making it much harder for an adversary to reverse-engineering the protected program. All in all, the research on PVM is much valuable than it appears.
 
 \section{Conclusions and Future Work}
 
